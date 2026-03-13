@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>家庭设备管家</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #e2ddd6;
+    --border2: #d0cac0;
+    --text: #1a1714;
+    --text2: #6b6560;
+    --text3: #9e9890;
+    --ok: #2d6a4f;
+    --ok-bg: #eaf4ee;
+    --warn: #92400e;
+    --warn-bg: #fef3cd;
+    --alert: #991b1b;
+    --alert-bg: #fde8e8;
+    --accent: #2d3748;
+    --accent-light: #eef0f3;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  
+  /* Layout */
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--bg); position: relative; }
+  
+  /* Top nav */
+  .topnav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px 12px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 12px; }
+  .topnav-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; flex: 1; }
+  .topnav-back { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 15px; padding: 4px 0; display: flex; align-items: center; gap: 4px; font-family: inherit; }
+  .topnav-back:hover { color: var(--text); }
+  
+  /* Bottom nav */
+  .bottomnav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--surface); border-top: 1px solid var(--border); display: flex; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 0 12px; cursor: pointer; border: none; background: none; font-family: inherit; color: var(--text3); transition: color .15s; }
+  .nav-item.active { color: var(--text); }
+  .nav-icon { font-size: 20px; line-height: 1; }
+  .nav-label { font-size: 10px; font-weight: 500; }
+  
+  /* Page content */
+  .page { padding: 16px 16px 90px; display: none; }
+  .page.active { display: block; }
+  
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .card-clickable { cursor: pointer; transition: box-shadow .15s, border-color .15s; }
+  .card-clickable:hover { box-shadow: var(--shadow-md); border-color: var(--border2); }
+  
+  /* Stat row */
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 12px; text-align: center; }
+  .stat-num { font-size: 26px; font-weight: 600; letter-spacing: -1px; font-family: 'DM Mono', monospace; }
+  .stat-label { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  
+  /* Device card */
+  .device-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+  .device-name { font-size: 15px; font-weight: 600; }
+  .device-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .badge-ok { background: var(--ok-bg); color: var(--ok); }
+  .badge-warn { background: var(--warn-bg); color: var(--warn); }
+  .badge-alert { background: var(--alert-bg); color: var(--alert); }
+  
+  /* Progress bar */
+  .progress-wrap { margin: 8px 0 4px; }
+  .progress-info { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; color: var(--text2); }
+  .progress-bar { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+  .fill-ok { background: #2d6a4f; }
+  .fill-warn { background: #d97706; }
+  .fill-alert { background: #dc2626; }
+  
+  /* Tags */
+  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
+  .tag { font-size: 11px; background: var(--surface2); color: var(--text2); padding: 3px 8px; border-radius: 6px; }
+  
+  /* Action buttons row */
+  .action-row { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .action-btn { flex: 1; font-size: 11px; font-weight: 500; font-family: inherit; color: var(--text2); background: var(--surface2); border: none; border-radius: var(--radius-sm); padding: 7px 4px; cursor: pointer; transition: background .15s, color .15s; text-align: center; }
+  .action-btn:hover { background: var(--border); color: var(--text); }
+  .action-btn.primary { background: var(--text); color: var(--surface); }
+  .action-btn.primary:hover { background: #2d3748; }
+  
+  /* Section label */
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin: 16px 0 8px; }
+  
+  /* Detail page */
+  .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: var(--radius-sm); padding: 3px; margin-bottom: 16px; }
+  .tab { flex: 1; text-align: center; font-size: 12px; font-weight: 500; padding: 7px 4px; border-radius: 6px; cursor: pointer; color: var(--text2); transition: all .15s; border: none; background: none; font-family: inherit; }
+  .tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  
+  /* Info table */
+  .info-table { width: 100%; }
+  .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { color: var(--text2); }
+  .info-val { font-weight: 500; text-align: right; }
+  
+  /* Maintenance items */
+  .maint-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .maint-item:last-child { border-bottom: none; }
+  .maint-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .maint-name { font-size: 14px; font-weight: 500; }
+  .maint-cycle { font-size: 11px; color: var(--text2); }
+  .maint-dates { display: flex; gap: 16px; font-size: 12px; color: var(--text2); }
+  .done-btn { font-size: 11px; font-family: inherit; background: var(--ok-bg); color: var(--ok); border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; font-weight: 600; margin-top: 6px; }
+  .done-btn:hover { background: #d1f0dc; }
+  
+  /* Consumables */
+  .consumable-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .consumable-item:last-child { border-bottom: none; }
+  .consumable-name { font-size: 14px; font-weight: 500; }
+  .consumable-model { font-size: 11px; color: var(--text2); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .stock-badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
+  .stock-ok { background: var(--ok-bg); color: var(--ok); }
+  .stock-low { background: var(--alert-bg); color: var(--alert); }
+  
+  /* Incidents */
+  .incident-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .incident-item:last-child { border-bottom: none; }
+  .incident-date { font-size: 11px; color: var(--text3); margin-bottom: 3px; font-family: 'DM Mono', monospace; }
+  .incident-problem { font-size: 13px; font-weight: 500; }
+  .incident-solution { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  
+  /* AI Chat */
+  .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .ai-logo { width: 36px; height: 36px; background: var(--text); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; }
+  .ai-title { font-size: 16px; font-weight: 600; }
+  .ai-sub { font-size: 12px; color: var(--text2); }
+  
+  .device-selector { margin-bottom: 12px; }
+  .device-selector select { width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+  .device-selector select:focus { border-color: var(--border2); }
+  
+  .chat-messages { min-height: 200px; max-height: 380px; overflow-y: auto; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 88%; }
+  .msg-user { align-self: flex-end; background: var(--text); color: white; padding: 10px 14px; border-radius: 16px 16px 4px 16px; font-size: 14px; line-height: 1.5; }
+  .msg-ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 14px; line-height: 1.6; color: var(--text); }
+  .msg-ai strong { color: var(--text); font-weight: 600; display: block; margin-bottom: 4px; }
+  .msg-thinking { color: var(--text3); font-style: italic; }
+  
+  .chat-input-row { display: flex; gap: 8px; }
+  .chat-input { flex: 1; font-family: inherit; font-size: 14px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); outline: none; resize: none; height: 42px; }
+  .chat-input:focus { border-color: var(--border2); }
+  .send-btn { background: var(--text); color: white; border: none; border-radius: 50%; width: 42px; height: 42px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .15s; }
+  .send-btn:disabled { opacity: 0.4; cursor: default; }
+  
+  /* Quick prompts */
+  .quick-prompts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .quick-btn { font-size: 11px; font-family: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 5px 11px; cursor: pointer; color: var(--text2); transition: all .15s; }
+  .quick-btn:hover { background: var(--surface2); color: var(--text); }
+  
+  /* Todo page */
+  .todo-item { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .todo-item:last-child { border-bottom: none; }
+  .todo-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .todo-body { flex: 1; }
+  .todo-task { font-size: 14px; font-weight: 500; }
+  .todo-device { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .todo-days { font-size: 12px; font-weight: 600; white-space: nowrap; }
+  
+  /* Notes area */
+  .notes-area { width: 100%; font-family: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; resize: vertical; min-height: 100px; outline: none; line-height: 1.6; }
+  .notes-area:focus { border-color: var(--border2); }
+  
+  /* API key input */
+  .api-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .api-input { flex: 1; font-family: 'DM Mono', monospace; font-size: 12px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+  .api-input:focus { border-color: var(--border2); }
+  .api-save-btn { font-family: inherit; font-size: 13px; font-weight: 500; background: var(--text); color: white; border: none; border-radius: var(--radius-sm); padding: 9px 14px; cursor: pointer; }
+  
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-text { font-size: 15px; font-weight: 500; }
+  .empty-sub { font-size: 13px; margin-top: 4px; }
+
+  /* Add device form */
+  .form-field { margin-bottom: 14px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; }
+  .form-input:focus { border-color: var(--border2); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* Step indicator */
+  .step-indicator { display: flex; align-items: center; gap: 0; margin-bottom: 20px; }
+  .step-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; transition: all .2s; }
+  .step-dot.active { background: var(--text); color: white; }
+  .step-dot.done { background: var(--ok-bg); color: var(--ok); }
+  .step-dot.pending { background: var(--surface2); color: var(--text3); }
+  .step-line { flex: 1; height: 1px; background: var(--border); }
+  .step-line.done { background: var(--ok); }
+
+  /* Inline list items (maintenance/consumable entries in form) */
+  .form-list-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .form-list-item-name { font-size: 13px; font-weight: 500; }
+  .form-list-item-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .remove-btn { background: none; border: none; color: var(--text3); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .remove-btn:hover { color: var(--alert); }
+
+  .add-item-btn { width: 100%; font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text2); background: var(--surface2); border: 1px dashed var(--border2); border-radius: var(--radius-sm); padding: 10px; cursor: pointer; transition: all .15s; }
+  .add-item-btn:hover { background: var(--border); color: var(--text); }
+
+  /* Sub-form card */
+  .sub-form { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; margin-top: 8px; border: 1px solid var(--border); }
+  .sub-form.hidden { display: none; }
+
+  /* Bottom action bar for form */
+  .form-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .btn-secondary { flex: 1; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; cursor: pointer; }
+  .btn-primary { flex: 2; font-family: inherit; font-size: 14px; font-weight: 600; color: white; background: var(--text); border: none; border-radius: var(--radius-sm); padding: 12px; cursor: pointer; }
+  .btn-danger { font-family: inherit; font-size: 13px; font-weight: 500; color: var(--alert); background: var(--alert-bg); border: none; border-radius: var(--radius-sm); padding: 10px 16px; cursor: pointer; }
+
+  /* Photo recognition */
+  .scan-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 20px 16px; text-align: center; margin-bottom: 14px; background: var(--surface2); cursor: pointer; transition: border-color .15s, background .15s; }
+  .scan-zone:hover { border-color: var(--text3); background: var(--border); }
+  .scan-zone-icon { font-size: 28px; margin-bottom: 6px; }
+  .scan-zone-text { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+  .scan-zone-sub { font-size: 12px; color: var(--text2); }
+  .scan-btn-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .scan-btn { flex: 1; font-family: inherit; font-size: 13px; font-weight: 500; padding: 10px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; gap: 6px; transition: all .15s; }
+  .scan-btn-camera { background: var(--text); color: white; border-color: var(--text); }
+  .scan-btn-camera:hover { opacity: .88; }
+  .scan-btn-upload { background: var(--surface); color: var(--text2); }
+  .scan-btn-upload:hover { background: var(--surface2); color: var(--text); }
+  .preview-wrap { position: relative; margin-bottom: 12px; }
+  .preview-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); display: block; }
+  .preview-clear { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.5); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .scan-result { background: var(--ok-bg); border: 1px solid #b7dfc6; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; font-size: 13px; }
+  .scan-result-title { font-weight: 600; color: var(--ok); margin-bottom: 6px; font-size: 12px; }
+  .scan-result-item { color: var(--text); margin-bottom: 3px; }
+  .scan-recognizing { display: flex; align-items: center; gap: 8px; color: var(--text2); font-size: 13px; font-style: italic; padding: 10px 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--text2); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TOP NAV -->
+  <div class="topnav" id="topnav">
+    <div class="topnav-title" id="topnav-title">家庭设备管家</div>
+  </div>
+
+  <!-- PAGE: Dashboard -->
+  <div class="page active" id="page-dashboard">
+    <div class="stat-row" id="stat-row"></div>
+    <div id="dashboard-content"></div>
+  </div>
+
+  <!-- PAGE: Devices List -->
+  <div class="page" id="page-devices">
+    <div id="devices-content"></div>
+    <button onclick="showPage('add')" style="width:100%;font-family:inherit;font-size:14px;font-weight:500;color:var(--text2);background:var(--surface);border:1px dashed var(--border2);border-radius:var(--radius);padding:14px;cursor:pointer;margin-bottom:10px" id="add-device-btn">+ 添加新设备</button>
+  </div>
+
+  <!-- PAGE: Todos -->
+  <div class="page" id="page-todos">
+    <div id="todos-content"></div>
+  </div>
+
+  <!-- PAGE: AI Chat -->
+  <div class="page" id="page-ai">
+    <div class="ai-header">
+      <div class="ai-logo">🔧</div>
+      <div><div class="ai-title">AI 故障助手</div><div class="ai-sub">描述问题，AI 帮你排查</div></div>
+    </div>
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Anthropic API Key（可选，不填则使用示例回复）</div>
+      <div class="api-row">
+        <input class="api-input" id="api-key-input" type="password" placeholder="sk-ant-...">
+        <button class="api-save-btn" onclick="saveApiKey()">保存</button>
+      </div>
+      <div id="api-key-status" style="font-size:11px;color:var(--text3)">未设置，将使用示例回复</div>
+    </div>
+    <div class="card">
+      <div class="device-selector">
+        <select id="ai-device-select">
+          <option value="">选择设备（可选）</option>
+        </select>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="msg msg-ai">你好！我是你的家庭设备助手。<br>告诉我设备出现了什么问题，我来帮你分析可能的原因和解决方法。</div>
+      </div>
+      <div class="quick-prompts" id="quick-prompts">
+        <button class="quick-btn" onclick="sendQuick('运行时噪音很大')">噪音很大</button>
+        <button class="quick-btn" onclick="sendQuick('开机后没有反应')">开机无反应</button>
+        <button class="quick-btn" onclick="sendQuick('出水/出风量变小了')">流量变小</button>
+        <button class="quick-btn" onclick="sendQuick('有异味')">有异味</button>
+        <button class="quick-btn" onclick="sendQuick('耗电量突然增加')">耗电增加</button>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-input" placeholder="描述问题..." onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Add Device (3-step form) -->
+  <div class="page" id="page-add">
+    <div class="step-indicator" id="step-indicator"></div>
+
+    <!-- Step 1: Basic info -->
+    <div id="add-step-1">
+
+      <!-- Photo scan card -->
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">拍照识别设备铭牌</div>
+
+        <!-- Image preview (hidden until photo selected) -->
+        <div id="scan-preview-wrap" class="preview-wrap" style="display:none">
+          <img id="scan-preview-img" class="preview-img" alt="预览">
+          <button class="preview-clear" onclick="clearScanPhoto()" title="清除">×</button>
+        </div>
+
+        <!-- Scan buttons -->
+        <div class="scan-btn-row" id="scan-btn-row">
+          <button class="scan-btn scan-btn-camera" onclick="triggerCamera()">📷 拍照</button>
+          <button class="scan-btn scan-btn-upload" onclick="triggerUpload()">🖼 选照片</button>
+        </div>
+        <!-- Hidden file inputs -->
+        <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoSelected(this)">
+        <input type="file" id="input-upload" accept="image/*" style="display:none" onchange="handlePhotoSelected(this)">
+
+        <!-- Recognizing state -->
+        <div id="scan-recognizing" style="display:none" class="scan-recognizing">
+          <div class="spin"></div> AI 正在识别中...
+        </div>
+
+        <!-- Result preview -->
+        <div id="scan-result" style="display:none" class="scan-result">
+          <div class="scan-result-title">✓ 识别成功，已自动填入以下信息</div>
+          <div id="scan-result-body"></div>
+        </div>
+
+        <div style="font-size:11px;color:var(--text3)">拍摄设备正面或铭牌（标签），AI 会识别品牌型号并自动生成保养建议</div>
+      </div>
+
+      <div class="card">
+        <div class="form-field">
+          <label class="form-label">设备名称 *</label>
+          <input class="form-input" id="f-name" placeholder="例：客厅空调、厨房净水器">
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">品牌 *</label>
+            <input class="form-input" id="f-brand" placeholder="例：格力、小米">
+          </div>
+          <div class="form-field">
+            <label class="form-label">型号</label>
+            <input class="form-input" id="f-model" placeholder="例：KFR-35GW">
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">安装位置</label>
+          <input class="form-input" id="f-room" placeholder="例：客厅、厨房、阳台">
+        </div>
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">购买日期</label>
+            <input class="form-input" type="date" id="f-purchase">
+          </div>
+          <div class="form-field">
+            <label class="form-label">保修到期</label>
+            <input class="form-input" type="date" id="f-warranty">
+          </div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">说明书链接</label>
+          <input class="form-input" id="f-manual-url" placeholder="品牌官网PDF链接或云盘分享链接">
+          <div class="form-hint">填入后可在设备详情中一键打开，AI诊断时也会引用</div>
+        </div>
+        <div class="form-field">
+          <label class="form-label">关键信息备注</label>
+          <textarea class="form-input notes-area" id="f-notes" style="min-height:100px" placeholder="从说明书里摘录关键内容，AI诊断时会直接参考这些文字。&#10;&#10;建议包含：&#10;· 保养周期和方法&#10;· 常见故障现象&#10;· 特殊注意事项&#10;· 易损零件位置"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-secondary" onclick="showPage('devices')">取消</button>
+        <button class="btn-primary" onclick="addStep(2)">下一步：保养计划 →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Maintenance -->
+    <div id="add-step-2" style="display:none">
+      <div class="card">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">添加定期保养项目，系统会自动计算下次时间并提醒你。</div>
+        <div id="maint-list"></div>
+        <button class="add-item-btn" onclick="toggleSubForm('maint-form')">+ 添加保养项目</button>
+        <div class="sub-form hidden" id="maint-form">
+          <div class="form-field" style="margin-bottom:10px">
+            <label class="form-label">任务名称</label>
+            <input class="form-input" id="sf-maint-task" placeholder="例：清洗滤网、更换滤芯">
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">周期（天）</label>
+              <input class="form-input" type="number" id="sf-maint-cycle" placeholder="90" min="1">
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">提前提醒（天）</label>
+              <input class="form-input" type="number" id="sf-maint-remind" placeholder="7" min="1">
+            </div>
+          </div>
+          <div class="form-field" style="margin-bottom:10px">
+            <label class="form-label">上次完成日期</label>
+            <input class="form-input" type="date" id="sf-maint-last">
+            <div class="form-hint">不填则从今天开始计算</div>
+          </div>
+          <button class="btn-primary" style="width:100%;padding:9px" onclick="addMaintItem()">确认添加</button>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-secondary" onclick="addStep(1)">← 上一步</button>
+        <button class="btn-primary" onclick="addStep(3)">下一步：耗材清单 →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Consumables -->
+    <div id="add-step-3" style="display:none">
+      <div class="card">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">记录需要定期补充的耗材，方便随时查看型号和购买方式。</div>
+        <div id="cons-list"></div>
+        <button class="add-item-btn" onclick="toggleSubForm('cons-form')">+ 添加耗材</button>
+        <div class="sub-form hidden" id="cons-form">
+          <div class="form-field" style="margin-bottom:10px">
+            <label class="form-label">耗材名称</label>
+            <input class="form-input" id="sf-cons-name" placeholder="例：RO滤芯、除垢剂">
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">型号/规格</label>
+              <input class="form-input" id="sf-cons-model" placeholder="例：MRO400-4A">
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">当前库存</label>
+              <input class="form-input" type="number" id="sf-cons-stock" placeholder="0" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">低库存警告值</label>
+              <input class="form-input" type="number" id="sf-cons-threshold" placeholder="1" min="0">
+            </div>
+            <div class="form-field" style="margin-bottom:10px">
+              <label class="form-label">购买链接</label>
+              <input class="form-input" id="sf-cons-url" placeholder="https://...">
+            </div>
+          </div>
+          <button class="btn-primary" style="width:100%;padding:9px" onclick="addConsItem()">确认添加</button>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn-secondary" onclick="addStep(2)">← 上一步</button>
+        <button class="btn-primary" onclick="saveNewDevice()">✓ 保存设备</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: Device Detail -->
+  <div class="page" id="page-detail">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('overview')">概览</button>
+      <button class="tab" onclick="switchTab('maintenance')">保养</button>
+      <button class="tab" onclick="switchTab('consumables')">耗材</button>
+      <button class="tab" onclick="switchTab('incidents')">历史</button>
+    </div>
+    <div class="tab-content active" id="tab-overview"></div>
+    <div class="tab-content" id="tab-maintenance"></div>
+    <div class="tab-content" id="tab-consumables"></div>
+    <div class="tab-content" id="tab-incidents"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav">
+    <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+      <span class="nav-icon">⊡</span><span class="nav-label">总览</span>
+    </button>
+    <button class="nav-item" onclick="showPage('devices')" id="nav-devices">
+      <span class="nav-icon">◫</span><span class="nav-label">设备</span>
+    </button>
+    <button class="nav-item" onclick="showPage('todos')" id="nav-todos">
+      <span class="nav-icon">◷</span><span class="nav-label">待办</span>
+    </button>
+    <button class="nav-item" onclick="showPage('ai')" id="nav-ai">
+      <span class="nav-icon">◈</span><span class="nav-label">AI 助手</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────
+const today = new Date();
+function daysFromNow(d) {
+  return Math.ceil((new Date(d) - today) / 86400000);
+}
+function addDays(dateStr, days) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+function todayStr() {
+  return today.toISOString().split('T')[0];
+}
+
+let data = JSON.parse(localStorage.getItem('hm_data') || 'null') || {
+  devices: [
+    {
+      id: "1", name: "净水器", brand: "小米", model: "RO400G",
+      room: "厨房", purchase_date: "2023-03-01", warranty_until: "2026-03-01",
+      status: "alert", notes: "RO反渗透滤芯使用寿命约12个月。更换时关闭进水阀，拔出旧芯，插入新芯需对准卡口。更换后需冲洗约2桶废水再正常使用。重置寿命：长按童锁键5秒。",
+      maintenance: [
+        { id: "m1", task: "更换RO滤芯", cycle_days: 365, last_done: "2025-03-15", next_due: "2026-03-15", remind_days_before: 30 },
+        { id: "m2", task: "清洗前置滤芯", cycle_days: 90, last_done: "2026-01-10", next_due: "2026-04-10", remind_days_before: 7 }
+      ],
+      consumables: [
+        { id: "c1", name: "RO反渗透滤芯", model: "MRO400-4A", stock: 0, low_stock_threshold: 1, buy_url: "https://www.mi.com" },
+        { id: "c2", name: "前置PP棉", model: "MRO400-1A", stock: 2, low_stock_threshold: 1, buy_url: "https://www.mi.com" }
+      ],
+      incidents: [
+        { date: "2025-08-12", problem: "出水量明显减少", solution: "清洗前置滤芯后恢复正常" },
+        { date: "2024-11-03", problem: "废水比例增大", solution: "检查进水压力，调整限流管" }
+      ]
+    },
+    {
+      id: "2", name: "客厅空调", brand: "格力", model: "KFR-35GW/NhAc3B",
+      room: "客厅", purchase_date: "2022-07-01", warranty_until: "2027-07-01",
+      status: "warning", notes: "制冷剂R32型。滤网可水洗，自然晾干后安装。外机散热片每2年请专业清洗一次。制冷量不足时检查室外机周围是否有遮挡。",
+      maintenance: [
+        { id: "m3", task: "清洗滤网", cycle_days: 90, last_done: "2025-12-15", next_due: "2026-03-15", remind_days_before: 7 },
+        { id: "m4", task: "外机散热片清洗", cycle_days: 730, last_done: "2024-06-01", next_due: "2026-06-01", remind_days_before: 30 }
+      ],
+      consumables: [
+        { id: "c3", name: "空调清洗剂", model: "通用型", stock: 1, low_stock_threshold: 1, buy_url: "" }
+      ],
+      incidents: [
+        { date: "2025-07-20", problem: "制冷效果变差", solution: "清洗外机散热片后恢复" }
+      ]
+    },
+    {
+      id: "3", name: "洗衣机", brand: "海尔", model: "EG100HB209S",
+      room: "阳台", purchase_date: "2021-05-01", warranty_until: "2024-05-01",
+      status: "ok", notes: "滚筒洗衣机。每次使用后留门缝防潮。每月至少一次桶自洁程序（使用专用槽洗剂）。密封圈处容易积存污垢，定期用湿布擦拭。",
+      maintenance: [
+        { id: "m5", task: "桶自洁清洁", cycle_days: 30, last_done: "2026-02-20", next_due: "2026-03-22", remind_days_before: 5 },
+        { id: "m6", task: "清洁密封圈", cycle_days: 30, last_done: "2026-02-20", next_due: "2026-03-22", remind_days_before: 5 },
+        { id: "m7", task: "清洁过滤器（线屑）", cycle_days: 60, last_done: "2026-01-15", next_due: "2026-03-15", remind_days_before: 7 }
+      ],
+      consumables: [
+        { id: "c4", name: "槽洗剂", model: "海尔专用", stock: 3, low_stock_threshold: 1, buy_url: "" },
+        { id: "c5", name: "洗衣机清洁片", model: "通用", stock: 5, low_stock_threshold: 2, buy_url: "" }
+      ],
+      incidents: []
+    },
+    {
+      id: "4", name: "冰箱", brand: "西门子", model: "KG32NV237C",
+      room: "厨房", purchase_date: "2020-11-01", warranty_until: "2023-11-01",
+      status: "ok", notes: "冷藏温度建议2-5℃，冷冻-18℃。背部散热片每半年除尘一次。门封条定期用温水清洁。若出现结霜过厚需手动除霜。",
+      maintenance: [
+        { id: "m8", task: "清洁门封条", cycle_days: 90, last_done: "2026-01-05", next_due: "2026-04-05", remind_days_before: 7 },
+        { id: "m9", task: "背部散热片除尘", cycle_days: 180, last_done: "2025-09-01", next_due: "2026-03-01", remind_days_before: 14 }
+      ],
+      consumables: [],
+      incidents: [
+        { date: "2025-03-10", problem: "冷藏室温度偏高", solution: "检查后发现门封条老化变形，更换后恢复正常" }
+      ]
+    },
+    {
+      id: "5", name: "油烟机", brand: "方太", model: "EMC3+T",
+      room: "厨房", purchase_date: "2021-05-01", warranty_until: "2024-05-01",
+      status: "ok", notes: "侧吸式油烟机。油杯满了会影响吸力，定期清空。滤油网可拆卸清洗，建议用碱性厨房清洁剂浸泡30分钟。风机叶片积油严重时建议请专业上门清洗。",
+      maintenance: [
+        { id: "m10", task: "清洁油杯", cycle_days: 30, last_done: "2026-02-25", next_due: "2026-03-27", remind_days_before: 5 },
+        { id: "m11", task: "清洗滤油网", cycle_days: 60, last_done: "2026-01-20", next_due: "2026-03-20", remind_days_before: 7 },
+        { id: "m12", task: "专业清洗风机", cycle_days: 365, last_done: "2025-05-10", next_due: "2026-05-10", remind_days_before: 14 }
+      ],
+      consumables: [],
+      incidents: []
+    }
+  ]
+};
+
+function saveData() {
+  localStorage.setItem('hm_data', JSON.stringify(data));
+}
+
+// ─── STATUS CALC ────────────────────────────────────────────────────
+function getDeviceStatus(device) {
+  const tasks = device.maintenance || [];
+  let worst = 'ok';
+  for (const t of tasks) {
+    const days = daysFromNow(t.next_due);
+    if (days < 0) { worst = 'alert'; break; }
+    if (days <= t.remind_days_before) { if (worst !== 'alert') worst = 'warning'; }
+  }
+  // consumable check
+  for (const c of device.consumables || []) {
+    if (c.stock <= 0) { worst = 'alert'; break; }
+    if (c.stock <= c.low_stock_threshold && worst === 'ok') worst = 'warning';
+  }
+  return worst;
+}
+
+function statusBadge(st) {
+  if (st === 'alert') return '<span class="badge badge-alert">⚠ 需要处理</span>';
+  if (st === 'warning') return '<span class="badge badge-warn">○ 即将到期</span>';
+  return '<span class="badge badge-ok">✓ 正常</span>';
+}
+
+function maintenancePct(task) {
+  const total = task.cycle_days;
+  const done = Math.max(0, total - Math.max(0, daysFromNow(task.next_due)) - task.remind_days_before);
+  const used = total - daysFromNow(task.next_due);
+  return Math.min(100, Math.max(0, Math.round(used / total * 100)));
+}
+
+function maintenanceFillClass(task) {
+  const days = daysFromNow(task.next_due);
+  if (days < 0) return 'fill-alert';
+  if (days <= task.remind_days_before) return 'fill-warn';
+  return 'fill-ok';
+}
+
+function urgentTasks() {
+  const list = [];
+  for (const dev of data.devices) {
+    const st = getDeviceStatus(dev);
+    dev.status = st;
+    for (const t of dev.maintenance || []) {
+      const days = daysFromNow(t.next_due);
+      if (days <= 30) list.push({ device: dev, task: t, days });
+    }
+    for (const c of dev.consumables || []) {
+      if (c.stock <= c.low_stock_threshold) {
+        list.push({ device: dev, task: { task: `补充${c.name}（库存${c.stock}）`, next_due: todayStr() }, days: 0, isConsumable: true });
+      }
+    }
+  }
+  return list.sort((a, b) => a.days - b.days);
+}
+
+// ─── PAGES ──────────────────────────────────────────────────────────
+let currentPage = 'dashboard';
+let currentDevice = null;
+
+function showPage(name, device) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  currentPage = name;
+
+  if (name === 'detail' && device) {
+    currentDevice = device;
+    renderDetail(device);
+    document.getElementById('page-detail').classList.add('active');
+    const nav = document.getElementById('topnav');
+    nav.innerHTML = '';
+    const back = document.createElement('button');
+    back.className = 'topnav-back';
+    back.innerHTML = '← 返回';
+    back.onclick = () => showPage('devices');
+    nav.appendChild(back);
+    const title = document.createElement('div');
+    title.className = 'topnav-title';
+    title.id = 'topnav-title';
+    title.textContent = device.name;
+    nav.appendChild(title);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-danger';
+    delBtn.style.cssText = 'padding:6px 10px;font-size:12px';
+    delBtn.textContent = '删除';
+    delBtn.onclick = () => deleteDevice(device.id);
+    nav.appendChild(delBtn);
+    return;
+  }
+
+  if (name === 'add') {
+    document.getElementById('page-add').classList.add('active');
+    const nav = document.getElementById('topnav');
+    nav.innerHTML = '';
+    const back = document.createElement('button');
+    back.className = 'topnav-back';
+    back.innerHTML = '← 返回';
+    back.onclick = () => showPage('devices');
+    nav.appendChild(back);
+    const title = document.createElement('div');
+    title.className = 'topnav-title';
+    title.textContent = '添加新设备';
+    nav.appendChild(title);
+    initAddForm();
+    return;
+  }
+
+  document.getElementById('topnav').innerHTML = `<div class="topnav-title" id="topnav-title">家庭设备管家</div>`;
+  document.getElementById(`page-${name}`).classList.add('active');
+  const navEl = document.getElementById(`nav-${name}`);
+  if (navEl) navEl.classList.add('active');
+
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'devices') renderDevices();
+  if (name === 'todos') renderTodos();
+  if (name === 'ai') renderAIPage();
+}
+
+// ─── DASHBOARD ──────────────────────────────────────────────────────
+function renderDashboard() {
+  let ok = 0, warn = 0, alert = 0;
+  for (const d of data.devices) {
+    const st = getDeviceStatus(d);
+    d.status = st;
+    if (st === 'ok') ok++;
+    else if (st === 'warning') warn++;
+    else alert++;
+  }
+
+  document.getElementById('stat-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num" style="color:var(--ok)">${ok}</div><div class="stat-label">运行正常</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--warn)">${warn}</div><div class="stat-label">即将到期</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--alert)">${alert}</div><div class="stat-label">需要处理</div></div>
+  `;
+
+  const alertDevices = data.devices.filter(d => d.status === 'alert');
+  const warnDevices = data.devices.filter(d => d.status === 'warning');
+  const okDevices = data.devices.filter(d => d.status === 'ok');
+
+  let html = '';
+  if (alertDevices.length || warnDevices.length) {
+    html += '<div class="section-label">需要关注</div>';
+    for (const d of [...alertDevices, ...warnDevices]) html += deviceCardHTML(d);
+  }
+  if (okDevices.length) {
+    html += '<div class="section-label">运行正常</div>';
+    for (const d of okDevices) html += deviceCardHTML(d);
+  }
+  document.getElementById('dashboard-content').innerHTML = html;
+}
+
+function deviceCardHTML(d) {
+  const urgent = d.maintenance.filter(t => daysFromNow(t.next_due) <= t.remind_days_before).sort((a,b) => daysFromNow(a.next_due)-daysFromNow(b.next_due));
+  const firstTask = urgent[0] || d.maintenance[0];
+  const pct = firstTask ? maintenancePct(firstTask) : 0;
+  const fillClass = firstTask ? maintenanceFillClass(firstTask) : 'fill-ok';
+  const daysLeft = firstTask ? daysFromNow(firstTask.next_due) : 999;
+  const daysText = daysLeft < 0 ? `已逾期 ${Math.abs(daysLeft)} 天` : daysLeft === 0 ? '今天到期' : `${daysLeft} 天后`;
+
+  const lowConsumables = (d.consumables || []).filter(c => c.stock <= c.low_stock_threshold);
+
+  return `<div class="card card-clickable" onclick="showPage('detail', data.devices.find(x=>x.id==='${d.id}'))">
+    <div class="device-card-header">
+      <div><div class="device-name">${d.name}</div><div class="device-meta">${d.room} · ${d.brand} ${d.model}</div></div>
+      ${statusBadge(d.status)}
+    </div>
+    ${firstTask ? `<div class="tag-row">
+      <span class="tag">${firstTask.task}：${daysText}</span>
+      ${lowConsumables.map(c=>`<span class="tag" style="color:var(--alert)">${c.name} 库存${c.stock}</span>`).join('')}
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div>
+    </div>` : ''}
+    <div class="action-row">
+      <button class="action-btn" onclick="event.stopPropagation();showPage('detail',data.devices.find(x=>x.id==='${d.id}'));switchTab('maintenance')">保养记录</button>
+      <button class="action-btn" onclick="event.stopPropagation();showPage('detail',data.devices.find(x=>x.id==='${d.id}'));switchTab('consumables')">耗材清单</button>
+      <button class="action-btn primary" onclick="event.stopPropagation();startAIChat('${d.id}')">🔧 AI诊断</button>
+    </div>
+  </div>`;
+}
+
+// ─── DEVICES LIST ────────────────────────────────────────────────────
+function renderDevices() {
+  let html = '';
+  for (const d of data.devices) {
+    d.status = getDeviceStatus(d);
+    html += deviceCardHTML(d);
+  }
+  document.getElementById('devices-content').innerHTML = html;
+}
+
+// ─── TODOS ───────────────────────────────────────────────────────────
+function renderTodos() {
+  const tasks = urgentTasks();
+  const overdue = tasks.filter(t => t.days < 0);
+  const soon = tasks.filter(t => t.days >= 0 && t.days <= 7);
+  const later = tasks.filter(t => t.days > 7 && t.days <= 30);
+
+  let html = '';
+  function renderGroup(label, items, dotColor) {
+    if (!items.length) return '';
+    let s = `<div class="section-label">${label}</div><div class="card">`;
+    for (const item of items) {
+      const dStr = item.days < 0 ? `逾期 ${Math.abs(item.days)} 天` : item.days === 0 ? '今天' : `${item.days} 天后`;
+      s += `<div class="todo-item">
+        <div class="todo-dot" style="background:${dotColor}"></div>
+        <div class="todo-body">
+          <div class="todo-task">${item.task.task}</div>
+          <div class="todo-device">${item.device.name} · ${item.device.room}</div>
+        </div>
+        <div class="todo-days" style="color:${dotColor}">${dStr}</div>
+      </div>`;
+    }
+    return s + '</div>';
+  }
+
+  html += renderGroup('已逾期', overdue, 'var(--alert)');
+  html += renderGroup('本周内', soon, 'var(--warn)');
+  html += renderGroup('本月内', later, 'var(--text2)');
+
+  if (!tasks.length) {
+    html = `<div class="empty-state"><div class="empty-icon">✓</div><div class="empty-text">暂无待办任务</div><div class="empty-sub">所有设备保养均在计划内</div></div>`;
+  }
+
+  document.getElementById('todos-content').innerHTML = html;
+}
+
+// ─── DETAIL ─────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const names = ['overview','maintenance','consumables','incidents'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+function renderDetail(d) {
+  // Overview
+  const hasManual = d.manual_url && d.manual_url.trim();
+  const notesPlaceholder = `从说明书里摘录关键内容，AI诊断时会直接参考这些文字。\n\n建议包含：\n· 保养周期和方法\n· 常见故障现象和原因\n· 特殊注意事项\n· 易损零件位置`;
+  document.getElementById('tab-overview').innerHTML = `
+    <div class="card">
+      <div class="info-table">
+        <div class="info-row"><span class="info-key">品牌型号</span><span class="info-val">${d.brand} ${d.model}</span></div>
+        <div class="info-row"><span class="info-key">安装位置</span><span class="info-val">${d.room}</span></div>
+        <div class="info-row"><span class="info-key">购买日期</span><span class="info-val">${d.purchase_date}</span></div>
+        <div class="info-row"><span class="info-key">保修到期</span><span class="info-val">${d.warranty_until || '未记录'}</span></div>
+        <div class="info-row"><span class="info-key">当前状态</span><span class="info-val">${statusBadge(getDeviceStatus(d))}</span></div>
+      </div>
+    </div>
+
+    <div class="section-label">说明书</div>
+    <div class="card">
+      ${hasManual
+        ? `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div style="font-size:13px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${d.manual_url}</div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <a href="${d.manual_url}" target="_blank" style="font-size:12px;font-weight:500;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;text-decoration:none">打开 ↗</a>
+              <button onclick="editManualUrl('${d.id}')" style="font-size:12px;font-family:inherit;color:var(--text2);background:none;border:none;cursor:pointer;padding:6px 4px">修改</button>
+            </div>
+          </div>`
+        : `<div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div style="font-size:13px;color:var(--text2)">还没有添加说明书链接</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:3px">粘贴品牌官网的PDF地址或云盘分享链接</div>
+            </div>
+            <button onclick="editManualUrl('${d.id}')" style="font-size:12px;font-weight:500;font-family:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer;flex-shrink:0">+ 添加链接</button>
+          </div>`
+      }
+    </div>
+
+    <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+      <span>关键信息备注 <span style="font-weight:400;color:var(--text3)">· AI诊断参考来源</span></span>
+      ${d.notes ? `<span style="font-size:10px;color:var(--ok);font-weight:600">✓ 已填写</span>` : `<span style="font-size:10px;color:var(--warn);font-weight:600">建议填写</span>`}
+    </div>
+    <div class="card">
+      <textarea class="notes-area" id="notes-${d.id}" onblur="saveNotes('${d.id}')" placeholder="${notesPlaceholder}" style="min-height:140px">${d.notes || ''}</textarea>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        💡 这里的内容会在你使用 AI 诊断时自动附加给 Claude，信息越详细诊断越准确。失去焦点时自动保存。
+      </div>
+    </div>
+    <button class="action-btn primary" style="width:100%;padding:12px;margin-top:4px;border-radius:var(--radius-sm);font-size:14px" onclick="startAIChat('${d.id}')">🔧 用 AI 诊断这台设备</button>
+  `;
+
+  // Maintenance
+  let mhtml = '<div class="card">';
+  for (const t of d.maintenance || []) {
+    const days = daysFromNow(t.next_due);
+    const dStr = days < 0 ? `已逾期 ${Math.abs(days)} 天` : days === 0 ? '今天到期' : `${days} 天后`;
+    const pct = maintenancePct(t);
+    const fc = maintenanceFillClass(t);
+    mhtml += `<div class="maint-item">
+      <div class="maint-top">
+        <span class="maint-name">${t.task}</span>
+        <span class="maint-cycle">每 ${t.cycle_days} 天</span>
+      </div>
+      <div class="maint-dates">
+        <span>上次：${t.last_done}</span>
+        <span>下次：${t.next_due}（${dStr}）</span>
+      </div>
+      <div class="progress-wrap" style="margin:6px 0 4px">
+        <div class="progress-bar"><div class="progress-fill ${fc}" style="width:${pct}%"></div></div>
+      </div>
+      <button class="done-btn" onclick="markDone('${d.id}','${t.id}')">✓ 标记已完成</button>
+    </div>`;
+  }
+  if (!(d.maintenance||[]).length) mhtml += '<div class="empty-state" style="padding:20px"><div class="empty-text">暂无保养计划</div></div>';
+  mhtml += '</div>';
+  mhtml += `<button class="add-item-btn" onclick="showAddMaintForm('${d.id}')">+ 添加保养项目</button>`;
+  document.getElementById('tab-maintenance').innerHTML = mhtml;
+
+  // Consumables
+  let chtml = '<div class="card">';
+  if (!(d.consumables || []).length) {
+    chtml += '<div class="empty-state"><div class="empty-text">暂无耗材记录</div></div>';
+  } else {
+    for (const c of d.consumables) {
+      const low = c.stock <= c.low_stock_threshold;
+      chtml += `<div class="consumable-item">
+        <div>
+          <div class="consumable-name">${c.name}</div>
+          <div class="consumable-model">${c.model}</div>
+          ${c.buy_url ? `<a href="${c.buy_url}" target="_blank" style="font-size:11px;color:var(--text2);text-decoration:underline">购买链接</a>` : ''}
+        </div>
+        <div style="text-align:right">
+          <span class="stock-badge ${low?'stock-low':'stock-ok'}">库存 ${c.stock}</span>
+          <div style="display:flex;gap:4px;margin-top:6px">
+            <button onclick="adjustStock('${d.id}','${c.id}',-1)" style="background:var(--surface2);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;color:var(--text2)">−</button>
+            <button onclick="adjustStock('${d.id}','${c.id}',1)" style="background:var(--surface2);border:none;border-radius:6px;width:26px;height:26px;cursor:pointer;font-size:15px;color:var(--text2)">+</button>
+          </div>
+        </div>
+      </div>`;
+    }
+  }
+  chtml += '</div>';
+  chtml += `<button class="add-item-btn" onclick="showAddConsForm('${d.id}')">+ 添加耗材</button>`;
+  document.getElementById('tab-consumables').innerHTML = chtml;
+
+  // Incidents
+  let ihtml = '<div class="card">';
+  if (!(d.incidents || []).length) {
+    ihtml += '<div class="empty-state"><div class="empty-text">暂无历史故障记录</div></div>';
+  } else {
+    for (const inc of [...d.incidents].reverse()) {
+      ihtml += `<div class="incident-item">
+        <div class="incident-date">${inc.date}</div>
+        <div class="incident-problem">${inc.problem}</div>
+        <div class="incident-solution">解决方案：${inc.solution}</div>
+      </div>`;
+    }
+  }
+  ihtml += '</div>';
+  document.getElementById('tab-incidents').innerHTML = ihtml;
+}
+
+function markDone(deviceId, taskId) {
+  const dev = data.devices.find(d => d.id === deviceId);
+  const task = dev.maintenance.find(t => t.id === taskId);
+  task.last_done = todayStr();
+  task.next_due = addDays(todayStr(), task.cycle_days);
+  saveData();
+  renderDetail(dev);
+}
+
+function adjustStock(deviceId, consumableId, delta) {
+  const dev = data.devices.find(d => d.id === deviceId);
+  const con = dev.consumables.find(c => c.id === consumableId);
+  con.stock = Math.max(0, con.stock + delta);
+  saveData();
+  renderDetail(dev);
+}
+
+function saveNotes(deviceId) {
+  const dev = data.devices.find(d => d.id === deviceId);
+  dev.notes = document.getElementById(`notes-${deviceId}`).value;
+  saveData();
+}
+
+// ─── AI CHAT ─────────────────────────────────────────────────────────
+let chatHistory = [];
+let selectedDeviceId = null;
+
+function renderAIPage() {
+  const sel = document.getElementById('ai-device-select');
+  sel.innerHTML = '<option value="">选择设备（可选）</option>';
+  for (const d of data.devices) {
+    sel.innerHTML += `<option value="${d.id}">${d.name} (${d.brand} ${d.model})</option>`;
+  }
+  if (selectedDeviceId) sel.value = selectedDeviceId;
+  const key = localStorage.getItem('hm_api_key') || '';
+  if (key) {
+    document.getElementById('api-key-input').value = key;
+    document.getElementById('api-key-status').textContent = '✓ API Key 已设置，将调用 Claude';
+    document.getElementById('api-key-status').style.color = 'var(--ok)';
+  }
+}
+
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (val) {
+    localStorage.setItem('hm_api_key', val);
+    document.getElementById('api-key-status').textContent = '✓ API Key 已保存';
+    document.getElementById('api-key-status').style.color = 'var(--ok)';
+  }
+}
+
+function startAIChat(deviceId) {
+  selectedDeviceId = deviceId;
+  showPage('ai');
+  document.getElementById('ai-device-select').value = deviceId;
+}
+
+function sendQuick(text) {
+  document.getElementById('chat-input').value = text;
+  sendMessage();
+}
+
+function editManualUrl(deviceId) {
+  const dev = data.devices.find(d => d.id === deviceId);
+  const url = prompt('输入说明书链接（留空则清除）', dev.manual_url || '');
+  if (url === null) return; // cancelled
+  dev.manual_url = url.trim();
+  saveData();
+  renderDetail(dev);
+}
+
+function buildContext(deviceId) {
+  if (!deviceId) return '';
+  const dev = data.devices.find(d => d.id === deviceId);
+  if (!dev) return '';
+  const mHistory = dev.maintenance.map(t => `${t.task}：上次${t.last_done}，下次${t.next_due}`).join('；');
+  const incidents = (dev.incidents||[]).map(i => `${i.date} ${i.problem}（解决：${i.solution}）`).join('；');
+  return `
+当前设备：${dev.brand} ${dev.name} 型号${dev.model}，位置：${dev.room}
+购买日期：${dev.purchase_date}，保修到期：${dev.warranty_until || '未知'}
+维护记录：${mHistory || '无'}
+历史故障：${incidents || '无'}
+说明书：${dev.manual_url ? dev.manual_url : '未提供'}
+关键信息备注（来自说明书摘录）：
+${dev.notes || '（用户未填写，请基于设备型号的通用知识回答）'}
+  `.trim();
+}
+
+// Detect if Claude wants to search: looks for SEARCH_REQUEST: keyword
+const SEARCH_TAG = 'SEARCH_REQUEST:';
+
+function buildSystemPrompt(deviceId) {
+  const context = buildContext(deviceId);
+  const hasLocalInfo = deviceId && (() => {
+    const dev = data.devices.find(d => d.id === deviceId);
+    return dev && (dev.notes || dev.manual_url);
+  })();
+
+  return `你是专业的家庭设备维修助手，熟悉各类家用电器的维修和保养。回复要简洁实用，用中文。
+
+${context ? `以下是当前设备信息：\n${context}` : ''}
+
+【重要指令 - 搜索策略】
+${hasLocalInfo
+  ? `用户已提供了设备的说明书备注和关键信息，请优先根据这些本地信息回答。
+只有在以下情况才需要联网搜索：本地信息完全没有涉及用户问题，或者需要查询最新价格/购买渠道。`
+  : `用户没有填写设备说明书和备注信息，你可以基于对该型号的已有知识回答。
+如果你认为需要搜索才能给出准确信息，告知用户。`}
+
+如果你判断需要联网搜索，不要直接搜索，而是在回复末尾单独一行输出以下格式（不要加任何其他文字在这一行）：
+${SEARCH_TAG} [简短说明搜索什么，例如：小米RO400G滤芯更换步骤]
+
+用户确认后你才会获得搜索结果。如果本地信息已经足够回答，不要输出这一行。`;
+}
+
+async function callClaude(messages, useSearch, deviceId) {
+  const apiKey = localStorage.getItem('hm_api_key');
+  const body = {
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 1000,
+    system: buildSystemPrompt(deviceId),
+    messages
+  };
+  if (useSearch) {
+    body.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
+  }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const result = await res.json();
+  // Extract text from content blocks (may include tool_use/tool_result blocks)
+  const text = (result.content || [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
+    .join('');
+  return text || '抱歉，调用失败，请检查 API Key。';
+}
+
+function renderAIMessage(container, text, pendingSearchQuery) {
+  container.className = 'msg msg-ai';
+
+  if (pendingSearchQuery) {
+    // Show reply without the SEARCH_REQUEST line, plus a confirm button
+    const cleanText = text.replace(new RegExp(`${SEARCH_TAG}.*$`, 'm'), '').trim();
+    container.innerHTML = (cleanText ? cleanText.replace(/\n/g, '<br>') + '<br><br>' : '') +
+      `<div style="background:var(--warn-bg);border-radius:var(--radius-sm);padding:10px 12px;margin-top:4px">
+        <div style="font-size:12px;color:var(--warn);font-weight:600;margin-bottom:6px">🔍 需要联网搜索</div>
+        <div style="font-size:13px;color:var(--text);margin-bottom:10px">${pendingSearchQuery}</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="confirmSearch(this)" data-query="${pendingSearchQuery.replace(/"/g,'&quot;')}"
+            style="font-family:inherit;font-size:12px;font-weight:600;background:var(--text);color:white;border:none;border-radius:6px;padding:7px 14px;cursor:pointer">
+            确认搜索
+          </button>
+          <button onclick="declineSearch(this)"
+            style="font-family:inherit;font-size:12px;color:var(--text2);background:var(--surface2);border:none;border-radius:6px;padding:7px 14px;cursor:pointer">
+            不用了
+          </button>
+        </div>
+      </div>`;
+  } else {
+    container.innerHTML = text.replace(/\n/g, '<br>');
+  }
+}
+
+async function confirmSearch(btn) {
+  const query = btn.getAttribute('data-query');
+  const deviceId = document.getElementById('ai-device-select').value;
+  const msgs = document.getElementById('chat-messages');
+
+  // Replace the confirm card with a searching indicator
+  const msgCard = btn.closest('.msg');
+  msgCard.innerHTML = `<span style="color:var(--text3);font-style:italic">🔍 正在搜索「${query}」...</span>`;
+
+  document.getElementById('send-btn').disabled = true;
+  try {
+    const reply = await callClaude(chatHistory, true, deviceId);
+    chatHistory.push({ role: 'assistant', content: reply });
+    msgCard.className = 'msg msg-ai';
+    msgCard.innerHTML = reply.replace(/\n/g, '<br>');
+  } catch(e) {
+    msgCard.innerHTML = '搜索失败，请稍后重试。';
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('send-btn').disabled = false;
+}
+
+function declineSearch(btn) {
+  const msgCard = btn.closest('.msg');
+  // Remove just the search-confirm block, keep any text above it
+  const block = btn.closest('div[style*="warn-bg"]');
+  if (block) block.remove();
+  // Add a short note
+  const note = document.createElement('div');
+  note.style.cssText = 'font-size:12px;color:var(--text3);margin-top:6px;font-style:italic';
+  note.textContent = '已取消搜索，以上为基于已有知识的回答。';
+  msgCard.appendChild(note);
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+
+  const deviceId = document.getElementById('ai-device-select').value;
+  const msgs = document.getElementById('chat-messages');
+
+  // User bubble
+  const userDiv = document.createElement('div');
+  userDiv.className = 'msg msg-user';
+  userDiv.textContent = msg;
+  msgs.appendChild(userDiv);
+
+  // Thinking indicator
+  const thinkDiv = document.createElement('div');
+  thinkDiv.className = 'msg msg-ai msg-thinking';
+  thinkDiv.textContent = '正在分析...';
+  msgs.appendChild(thinkDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('send-btn').disabled = true;
+
+  chatHistory.push({ role: 'user', content: msg });
+
+  const apiKey = localStorage.getItem('hm_api_key');
+  if (!apiKey) {
+    const reply = getDemoReply(msg, deviceId);
+    chatHistory.push({ role: 'assistant', content: reply });
+    thinkDiv.className = 'msg msg-ai';
+    thinkDiv.innerHTML = reply.replace(/\n/g, '<br>');
+    msgs.scrollTop = msgs.scrollHeight;
+    document.getElementById('send-btn').disabled = false;
+    return;
+  }
+
+  try {
+    const reply = await callClaude(chatHistory, false, deviceId);
+
+    // Check if Claude wants to search
+    const searchMatch = reply.match(new RegExp(`${SEARCH_TAG}\\s*(.+)`, 'm'));
+    const pendingQuery = searchMatch ? searchMatch[1].trim() : null;
+
+    // Store reply in history (without the search tag line if present)
+    const historyReply = pendingQuery
+      ? reply.replace(new RegExp(`${SEARCH_TAG}.*$`, 'm'), '').trim()
+      : reply;
+    chatHistory.push({ role: 'assistant', content: historyReply });
+
+    renderAIMessage(thinkDiv, reply, pendingQuery);
+  } catch(e) {
+    thinkDiv.className = 'msg msg-ai';
+    thinkDiv.innerHTML = '网络请求失败，请检查 API Key 是否正确。';
+  }
+
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('send-btn').disabled = false;
+}
+
+function getDemoReply(msg, deviceId) {
+  const dev = deviceId ? data.devices.find(d => d.id === deviceId) : null;
+  const name = dev ? dev.name : '设备';
+
+  if (msg.includes('噪音') || msg.includes('声音')) {
+    return `${name}噪音过大，常见原因如下：\n\n1. 机器未放平 — 检查四脚是否稳固，调整水平脚\n2. 内部异物 — 检查是否有硬币、钥匙等落入\n3. 零件松动 — 检查外壳螺丝是否松动\n4. 轴承磨损 — 长期使用后的正常磨耗，需专业维修\n\n建议先检查放置是否水平，这是最常见原因。`;
+  }
+  if (msg.includes('开机') || msg.includes('不工作') || msg.includes('没有反应')) {
+    return `${name}无法开机，排查步骤：\n\n1. 检查电源 — 确认插头牢固，试另一个插座\n2. 检查断路器 — 看配电箱对应回路是否跳闸\n3. 检查保险丝 — 部分设备有内置保险丝\n4. 检查控制面板 — 是否进入了儿童锁或保护模式\n\n如以上都正常仍不开机，建议联系售后。`;
+  }
+  if (msg.includes('滤芯') || msg.includes('净水')) {
+    return `净水器 RO 滤芯更换步骤：\n\n1. 关闭进水阀（通常在水管接头处）\n2. 打开纯水龙头排掉余压\n3. 逆时针旋转滤芯仓盖取下（有工具的用扳手）\n4. 拔出旧滤芯，清洁仓内\n5. 插入新滤芯，对准卡口按紧\n6. 装回仓盖，打开进水阀\n7. 开机冲洗 2-3 桶废水后正常使用\n8. 长按童锁键 5 秒重置寿命计数\n\n建议备一条毛巾接余水。`;
+  }
+  if (msg.includes('流量') || msg.includes('出水') || msg.includes('变小')) {
+    return `出水量变小常见原因：\n\n1. 前置滤芯堵塞 — 最常见，清洗或更换前置PP棉\n2. RO膜老化 — 使用超过12个月建议更换\n3. 进水压力不足 — 早晨用水高峰期属正常，其他时间低则需检查\n4. 废水比例失衡 — 检查限流管是否堵塞\n\n建议先检查前置滤芯，这是最简单的解决方案。`;
+  }
+
+  return `关于"${msg}"，以下是可能的排查思路：\n\n1. 首先确认问题的具体表现（声音/气味/功能异常）\n2. 检查最近是否有保养到期未处理\n3. 对比历史故障记录是否有相似情况\n\n如需更精准的诊断，建议在选择设备后再描述问题，我可以结合设备型号和历史记录给出更具体的建议。\n\n也可以填入 Anthropic API Key 使用真实的 AI 诊断功能。`;
+}
+
+// ─── ADD DEVICE FORM ─────────────────────────────────────────────────
+let addStep_current = 1;
+let newMaintItems = [];
+let newConsItems = [];
+let scanImageBase64 = null;
+
+function initAddForm() {
+  addStep_current = 1;
+  newMaintItems = [];
+  newConsItems = [];
+  scanImageBase64 = null;
+  // Reset fields
+  ['f-name','f-brand','f-model','f-room','f-notes','f-manual-url'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-purchase').value = todayStr();
+  document.getElementById('f-warranty').value = '';
+  // Reset scan UI
+  clearScanPhoto();
+  renderStepIndicator(1);
+  showAddStep(1);
+  renderMaintList();
+  renderConsList();
+}
+
+// ─── PHOTO RECOGNITION ───────────────────────────────────────────────
+function triggerCamera() { document.getElementById('input-camera').click(); }
+function triggerUpload() { document.getElementById('input-upload').click(); }
+
+function clearScanPhoto() {
+  scanImageBase64 = null;
+  document.getElementById('scan-preview-wrap').style.display = 'none';
+  document.getElementById('scan-btn-row').style.display = 'flex';
+  document.getElementById('scan-recognizing').style.display = 'none';
+  document.getElementById('scan-result').style.display = 'none';
+  // Reset file inputs
+  ['input-camera','input-upload'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function handlePhotoSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    // Show preview
+    document.getElementById('scan-preview-img').src = dataUrl;
+    document.getElementById('scan-preview-wrap').style.display = 'block';
+    document.getElementById('scan-btn-row').style.display = 'none';
+    document.getElementById('scan-result').style.display = 'none';
+
+    // Strip data:image/...;base64, prefix, keep media type
+    const match = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+    if (!match) return;
+    const mediaType = match[1];
+    scanImageBase64 = { data: match[2], mediaType };
+
+    // Auto-start recognition if API key exists
+    const apiKey = localStorage.getItem('hm_api_key');
+    if (apiKey) {
+      recognizeDevice();
+    } else {
+      document.getElementById('scan-result').style.display = 'block';
+      document.getElementById('scan-result-body').innerHTML =
+        '<div style="color:var(--warn)">请先在 AI 助手页面填入 API Key，再使用拍照识别功能。</div>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function recognizeDevice() {
+  if (!scanImageBase64) return;
+  const apiKey = localStorage.getItem('hm_api_key');
+  if (!apiKey) return;
+
+  document.getElementById('scan-recognizing').style.display = 'flex';
+  document.getElementById('scan-result').style.display = 'none';
+
+  const prompt = `请识别这张图片中的家用设备，从铭牌或设备外观提取信息，然后以 JSON 格式返回以下内容（只返回 JSON，不要任何解释）：
+
+{
+  "name": "设备通俗名称（例：洗衣机、空调、净水器）",
+  "brand": "品牌名（中文）",
+  "model": "完整型号编号",
+  "maintenance": [
+    {"task": "保养任务名称", "cycle_days": 天数, "remind_days_before": 提前提醒天数}
+  ],
+  "consumables": [
+    {"name": "耗材名称", "model": "型号/规格（如不确定填空字符串）", "low_stock_threshold": 1}
+  ],
+  "notes": "关键使用注意事项和常见故障排查要点（200字以内）"
+}
+
+maintenance 至少包含该设备常见的2-4项保养任务，consumables 包含常用耗材（若该设备无耗材则返回空数组）。
+如果图片中无法识别到具体型号，model 字段填空字符串，其余字段尽量根据设备类型填写通用建议。`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: scanImageBase64.mediaType,
+                data: scanImageBase64.data
+              }
+            },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    const result = await res.json();
+    const text = result.content?.[0]?.text || '';
+
+    // Parse JSON — strip possible markdown fences
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    applyRecognitionResult(parsed);
+
+  } catch(e) {
+    document.getElementById('scan-recognizing').style.display = 'none';
+    document.getElementById('scan-result').style.display = 'block';
+    document.getElementById('scan-result').style.background = 'var(--alert-bg)';
+    document.getElementById('scan-result').style.borderColor = '#f5b8b8';
+    document.getElementById('scan-result-body').innerHTML =
+      `<div style="color:var(--alert)">识别失败，请手动填写。（${e.message}）</div>`;
+  }
+}
+
+function applyRecognitionResult(r) {
+  document.getElementById('scan-recognizing').style.display = 'none';
+
+  // Fill basic fields
+  if (r.name)  document.getElementById('f-name').value  = r.name;
+  if (r.brand) document.getElementById('f-brand').value = r.brand;
+  if (r.model) document.getElementById('f-model').value = r.model;
+  if (r.notes) document.getElementById('f-notes').value = r.notes;
+
+  // Load maintenance items into newMaintItems
+  if (Array.isArray(r.maintenance) && r.maintenance.length) {
+    newMaintItems = r.maintenance.map((t, i) => ({
+      id: 'm' + Date.now() + i,
+      task: t.task,
+      cycle_days: t.cycle_days || 90,
+      remind_days_before: t.remind_days_before || 7,
+      last_done: todayStr(),
+      next_due: addDays(todayStr(), t.cycle_days || 90)
+    }));
+  }
+
+  // Load consumables into newConsItems
+  if (Array.isArray(r.consumables) && r.consumables.length) {
+    newConsItems = r.consumables.map((c, i) => ({
+      id: 'c' + Date.now() + i,
+      name: c.name,
+      model: c.model || '',
+      stock: 0,
+      low_stock_threshold: c.low_stock_threshold || 1,
+      buy_url: ''
+    }));
+  }
+
+  // Show result summary
+  const lines = [];
+  if (r.brand || r.model) lines.push(`<div class="scan-result-item">设备：${[r.brand, r.name, r.model].filter(Boolean).join(' ')}</div>`);
+  if (newMaintItems.length) lines.push(`<div class="scan-result-item">已生成 ${newMaintItems.length} 项保养计划</div>`);
+  if (newConsItems.length) lines.push(`<div class="scan-result-item">已生成 ${newConsItems.length} 种耗材记录</div>`);
+  if (r.notes) lines.push(`<div class="scan-result-item">已填入注意事项备注</div>`);
+
+  document.getElementById('scan-result').style.display = 'block';
+  document.getElementById('scan-result').style.background = 'var(--ok-bg)';
+  document.getElementById('scan-result').style.borderColor = '#b7dfc6';
+  document.getElementById('scan-result-body').innerHTML = lines.join('') +
+    '<div style="font-size:11px;color:var(--text3);margin-top:6px">请检查并修改下方表单，确认无误后继续下一步</div>';
+}
+
+
+function renderStepIndicator(current) {
+  const labels = ['基本信息','保养计划','耗材清单'];
+  let html = '';
+  labels.forEach((l, i) => {
+    const n = i + 1;
+    const cls = n < current ? 'done' : n === current ? 'active' : 'pending';
+    const icon = n < current ? '✓' : n;
+    if (i > 0) html += `<div class="step-line ${n <= current ? 'done' : ''}"></div>`;
+    html += `<div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div class="step-dot ${cls}">${icon}</div>
+      <div style="font-size:10px;color:var(--text3);white-space:nowrap">${l}</div>
+    </div>`;
+  });
+  document.getElementById('step-indicator').innerHTML = html;
+}
+
+function showAddStep(n) {
+  [1,2,3].forEach(i => {
+    const el = document.getElementById(`add-step-${i}`);
+    if (el) el.style.display = i === n ? 'block' : 'none';
+  });
+}
+
+function addStep(n) {
+  if (n === 2) {
+    const name = document.getElementById('f-name').value.trim();
+    const brand = document.getElementById('f-brand').value.trim();
+    if (!name || !brand) { alert('请填写设备名称和品牌'); return; }
+  }
+  addStep_current = n;
+  renderStepIndicator(n);
+  showAddStep(n);
+}
+
+function toggleSubForm(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('hidden');
+  if (!el.classList.contains('hidden')) {
+    // Set today as default for last_done
+    const lastField = document.getElementById('sf-maint-last');
+    if (lastField && !lastField.value) lastField.value = todayStr();
+  }
+}
+
+function addMaintItem() {
+  const task = document.getElementById('sf-maint-task').value.trim();
+  const cycle = parseInt(document.getElementById('sf-maint-cycle').value) || 0;
+  const remind = parseInt(document.getElementById('sf-maint-remind').value) || 7;
+  const last = document.getElementById('sf-maint-last').value || todayStr();
+  if (!task || !cycle) { alert('请填写任务名称和周期天数'); return; }
+  newMaintItems.push({
+    id: 'm' + Date.now(),
+    task, cycle_days: cycle, remind_days_before: remind,
+    last_done: last, next_due: addDays(last, cycle)
+  });
+  // Reset sub-form
+  ['sf-maint-task','sf-maint-cycle','sf-maint-remind','sf-maint-last'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('maint-form').classList.add('hidden');
+  renderMaintList();
+}
+
+function removeMaintItem(idx) {
+  newMaintItems.splice(idx, 1);
+  renderMaintList();
+}
+
+function renderMaintList() {
+  const el = document.getElementById('maint-list');
+  if (!newMaintItems.length) { el.innerHTML = ''; return; }
+  el.innerHTML = newMaintItems.map((t, i) => `
+    <div class="form-list-item">
+      <div>
+        <div class="form-list-item-name">${t.task}</div>
+        <div class="form-list-item-meta">每 ${t.cycle_days} 天 · 下次 ${t.next_due}</div>
+      </div>
+      <button class="remove-btn" onclick="removeMaintItem(${i})">×</button>
+    </div>`).join('');
+}
+
+function addConsItem() {
+  const name = document.getElementById('sf-cons-name').value.trim();
+  const model = document.getElementById('sf-cons-model').value.trim();
+  const stock = parseInt(document.getElementById('sf-cons-stock').value) || 0;
+  const threshold = parseInt(document.getElementById('sf-cons-threshold').value) || 1;
+  const url = document.getElementById('sf-cons-url').value.trim();
+  if (!name) { alert('请填写耗材名称'); return; }
+  newConsItems.push({ id: 'c' + Date.now(), name, model, stock, low_stock_threshold: threshold, buy_url: url });
+  ['sf-cons-name','sf-cons-model','sf-cons-stock','sf-cons-threshold','sf-cons-url'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cons-form').classList.add('hidden');
+  renderConsList();
+}
+
+function removeConsItem(idx) {
+  newConsItems.splice(idx, 1);
+  renderConsList();
+}
+
+function renderConsList() {
+  const el = document.getElementById('cons-list');
+  if (!newConsItems.length) { el.innerHTML = ''; return; }
+  el.innerHTML = newConsItems.map((c, i) => `
+    <div class="form-list-item">
+      <div>
+        <div class="form-list-item-name">${c.name}</div>
+        <div class="form-list-item-meta">${c.model ? c.model + ' · ' : ''}库存 ${c.stock}</div>
+      </div>
+      <button class="remove-btn" onclick="removeConsItem(${i})">×</button>
+    </div>`).join('');
+}
+
+function saveNewDevice() {
+  const newDev = {
+    id: 'd' + Date.now(),
+    name: document.getElementById('f-name').value.trim(),
+    brand: document.getElementById('f-brand').value.trim(),
+    model: document.getElementById('f-model').value.trim(),
+    room: document.getElementById('f-room').value.trim() || '未指定',
+    purchase_date: document.getElementById('f-purchase').value || todayStr(),
+    warranty_until: document.getElementById('f-warranty').value || '',
+    manual_url: document.getElementById('f-manual-url').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+    status: 'ok',
+    maintenance: newMaintItems,
+    consumables: newConsItems,
+    incidents: []
+  };
+  data.devices.push(newDev);
+  saveData();
+  showPage('detail', newDev);
+}
+
+// ─── DELETE DEVICE ────────────────────────────────────────────────────
+function deleteDevice(deviceId) {
+  if (!confirm('确定要删除这台设备及所有相关记录吗？此操作不可恢复。')) return;
+  data.devices = data.devices.filter(d => d.id !== deviceId);
+  saveData();
+  showPage('devices');
+}
+
+// ─── ADD MAINTENANCE/CONSUMABLE FROM DETAIL PAGE ──────────────────────
+function showAddMaintForm(deviceId) {
+  const task = prompt('保养任务名称（例：清洗滤网）');
+  if (!task) return;
+  const cycle = parseInt(prompt('周期天数（例：90）') || '0');
+  if (!cycle) return;
+  const remind = parseInt(prompt('提前几天提醒（默认7）') || '7');
+  const last = prompt('上次完成日期（留空=今天）', todayStr()) || todayStr();
+  const dev = data.devices.find(d => d.id === deviceId);
+  dev.maintenance.push({ id: 'm' + Date.now(), task, cycle_days: cycle, remind_days_before: remind, last_done: last, next_due: addDays(last, cycle) });
+  saveData();
+  renderDetail(dev);
+}
+
+function showAddConsForm(deviceId) {
+  const name = prompt('耗材名称（例：RO滤芯）');
+  if (!name) return;
+  const model = prompt('型号/规格（可留空）') || '';
+  const stock = parseInt(prompt('当前库存数量', '0') || '0');
+  const threshold = parseInt(prompt('低库存警告值（默认1）', '1') || '1');
+  const url = prompt('购买链接（可留空）') || '';
+  const dev = data.devices.find(d => d.id === deviceId);
+  dev.consumables.push({ id: 'c' + Date.now(), name, model, stock, low_stock_threshold: threshold, buy_url: url });
+  saveData();
+  renderDetail(dev);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────
+// Recalculate all statuses
+for (const d of data.devices) {
+  d.status = getDeviceStatus(d);
+}
+renderDashboard();
+</script>
+</body>
+</html>
